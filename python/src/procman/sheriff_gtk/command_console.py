@@ -93,7 +93,7 @@ class SheriffCommandConsole(Gtk.ScrolledWindow, SheriffListener):
 
         self._cmd_extradata = {}
 
-        lc.subscribe ("PM_OUTPUT", self.on_procman_output)
+        lc.subscribe ("PM_OUTPUT", output_t, self.on_procman_output)
 
         self.text_tags = {"normal": Gtk.TextTag.new("normal")}
         for tt in list(self.text_tags.values()):
@@ -343,8 +343,7 @@ class SheriffCommandConsole(Gtk.ScrolledWindow, SheriffListener):
 
         self._add_text_to_buffer(extradata.tb, toadd)
 
-    def on_procman_output(self, channel, data):
-        msg = output_t.decode(data)
+    def on_procman_output(self, channel, msg):
         for i in range(msg.num_commands):
             command_id = msg.command_ids[i]
             text = msg.text[i]

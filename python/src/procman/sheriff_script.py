@@ -3,7 +3,7 @@ import sys
 import time
 import threading
 
-import zcm
+import zerocm as zcm
 from procman_zcm.cmd_t import cmd_t
 from procman_zcm.deputy_info_t import deputy_info_t
 from procman_zcm.orders_t import orders_t

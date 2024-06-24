@@ -11,7 +11,7 @@ import traceback
 
 import gi
 
-from zcm import ZCM
+from zerocm import ZCM
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import GLib
@@ -791,14 +791,15 @@ def main():
             sys.exit(1)
 
     zcm_obj = ZCM()
-    def handle(*a):
-        try:
-            zcm_obj.handle()
-        except Exception:
-            traceback.print_exc()
-        return True
-    GObject.io_add_watch(zcm_obj, GObject.IO_IN, handle)
-    GObject.threads_init()
+    # def handle(*a):
+    #     try:
+    #         zcm_obj.handle()
+    #     except Exception:
+    #         traceback.print_exc()
+    #     return True
+    # GObject.io_add_watch(zcm_obj, GObject.IO_IN, handle)
+    # GObject.threads_init()
+    zcm_obj.start()
 
 
     if args.use_gui:

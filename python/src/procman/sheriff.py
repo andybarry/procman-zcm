@@ -9,7 +9,7 @@ import time
 import signal
 import threading
 
-import zcm
+import zerocm as zcm
 from procman_zcm.cmd_t import cmd_t
 from procman_zcm.deputy_info_t import deputy_info_t
 from procman_zcm.orders_t import orders_t
@@ -548,8 +548,8 @@ class Sheriff(object):
         if self._zcm is None:
             self._zcm = zcm.ZCM()
             self._zcm_thread_obj = threading.Thread(target = self._zcm_thread)
-        self._zcm.subscribe("PM_INFO", self._on_pmd_info)
-        self._zcm.subscribe("PM_ORDERS", self._on_pmd_orders)
+        self._zcm.subscribe("PM_INFO", deputy_info_t, self._on_pmd_info)
+        self._zcm.subscribe("PM_ORDERS", orders_t, self._on_pmd_orders)
         self._deputies = {}
         self._is_observer = False
         self._id = platform.node() + ":" + str(os.getpid()) + \
@@ -560,7 +560,7 @@ class Sheriff(object):
         discover_msg.utime = _now_utime()
         discover_msg.transmitter_id = self._id
         discover_msg.nonce = 0
-        self._zcm.publish("PM_DISCOVER", discover_msg.encode())
+        self._zcm.publish("PM_DISCOVER", discover_msg)
 
         # Create a worker thread for periodically publishing orders
         self._worker_thread_obj = threading.Thread(target = self._worker_thread)
@@ -647,13 +647,13 @@ class Sheriff(object):
         with self._lock:
             self._listeners.remove(sheriff_listener)
 
-    def _on_pmd_info(self, _, data):
+    def _on_pmd_info(self, _, info_msg):
         # ZCM callback. self._lock is not acquired
-        try:
-            info_msg = deputy_info_t.decode(data)
-        except ValueError:
-            _warn("invalid deputy_info_t message")
-            return
+        # try:
+        #     info_msg = deputy_info_t.decode(data)
+        # except ValueError:
+        #     _warn("invalid deputy_info_t message")
+        #     return
 
         now = _now_utime()
         if(now - info_msg.utime) * 1e-6 > 30 and not self.is_observer():
@@ -675,13 +675,13 @@ class Sheriff(object):
             self.__deputy_info_received(deputy)
             self._maybe_emit_status_change_signals(deputy, status_changes)
 
-    def _on_pmd_orders(self, _, data):
+    def _on_pmd_orders(self, _, orders_msg):
         # ZCM callback. self._lock is not acquired
-        try:
-            orders_msg = orders_t.decode(data)
-        except ValueError:
-            _warn("Invalid orders_t message")
-            return
+        # try:
+        #     orders_msg = orders_t.decode(data)
+        # except ValueError:
+        #     _warn("Invalid orders_t message")
+        #     return
 
         with self._lock:
             if self._is_observer:
@@ -724,7 +724,7 @@ class Sheriff(object):
             # only send orders to a deputy if we've heard from it.
             if deputy._last_update_utime > 0:
                 msg = deputy._make_orders_message(self._id)
-                self._zcm.publish("PM_ORDERS", msg.encode())
+                self._zcm.publish("PM_ORDERS", msg)
 
     def _add_command(self, command_id, deputy_id, exec_str,
                     group_name, auto_respawn, stop_signal, stop_time_allowed):
