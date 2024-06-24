@@ -235,7 +235,7 @@ function(zcmtypes_build_java)
     execute_process(COMMAND mkdir -p ${JAVA_OUTPUT_PATH})
 
     # do we have ZCM java bindings?  where is zcm.jar?
-    execute_process(COMMAND pkg-config --variable=classpath zcm-java OUTPUT_VARIABLE ZCM_JAR_FILE)
+    execute_process(COMMAND pkg-config --variable=classpath zcm OUTPUT_VARIABLE ZCM_JAR_FILE)
     if(NOT ZCM_JAR_FILE)
         message(STATUS "Not building Java ZCM type bindings (Can't find zcm.jar)")
         return()
@@ -285,7 +285,7 @@ function(zcmtypes_build_java)
 
     # add a rule to build the .class files from from the .java files
     add_custom_command(OUTPUT ${_zcmtypes_class_files} COMMAND
-        ${JAVA_COMPILE} -source 6 -target 6 -cp ${java_classpath} ${_zcmtypes_java_files}
+        ${JAVA_COMPILE} -cp ${java_classpath} ${_zcmtypes_java_files}
         DEPENDS ${_zcmtypes_java_files} VERBATIM)
 
     # add a rule to build a .jar file from the .class files
