@@ -43,7 +43,7 @@ computers. There are several ways to use procman:
 
 ### Dependencies
 
- * [LCM](http://lcm-proj.github.io)
+ * [ZCM](http://zcm-proj.github.io)
  * Python
  * PyGTK  (procman-sheriff is written in Python with PyGTK)
 

@@ -9,13 +9,13 @@ import time
 import signal
 import threading
 
-import lcm
-from procman_lcm.cmd_t import cmd_t
-from procman_lcm.deputy_info_t import deputy_info_t
-from procman_lcm.orders_t import orders_t
-from procman_lcm.cmd_desired_t import cmd_desired_t
-from procman_lcm.cmd_status_t import cmd_status_t
-from procman_lcm.discovery_t import discovery_t
+import zcm
+from procman_zcm.cmd_t import cmd_t
+from procman_zcm.deputy_info_t import deputy_info_t
+from procman_zcm.orders_t import orders_t
+from procman_zcm.cmd_desired_t import cmd_desired_t
+from procman_zcm.cmd_status_t import cmd_status_t
+from procman_zcm.discovery_t import discovery_t
 import procman.sheriff_config as sheriff_config
 
 def _dbg(text):
@@ -520,12 +520,12 @@ class Sheriff(object):
     \code
     import procman
 
-    sheriff = procman.Sheriff(lcm_obj)
+    sheriff = procman.Sheriff(zcm_obj)
 
     # add commands or load a config file
 
     while True:
-        lcm_obj.handle()
+        zcm_obj.handle()
     \endcode
 
     ## %SheriffListener ##
@@ -534,22 +534,22 @@ class Sheriff(object):
     add_listener().
     """
 
-    def __init__ (self, lcm_obj = None):
+    def __init__ (self, zcm_obj = None):
         """Initialize a new Sheriff object.
 
-        \param lcm_obj the LCM object to use for communication.  If None, then
-        the sheriff creates a new lcm.LCM() instance and spawns a thread that
-        endlessly calls LCM.handle(). If this is passed in by the user, then
-        the user is expected to call LCM.handle().
+        \param zcm_obj the ZCM object to use for communication.  If None, then
+        the sheriff creates a new zcm.ZCM() instance and spawns a thread that
+        endlessly calls ZCM.handle(). If this is passed in by the user, then
+        the user is expected to call ZCM.handle().
         """
-        self._lcm = lcm_obj
-        self._lcm_thread = None
-        self._lcm_thread_obj = None
-        if self._lcm is None:
-            self._lcm = lcm.LCM()
-            self._lcm_thread_obj = threading.Thread(target = self._lcm_thread)
-        self._lcm.subscribe("PM_INFO", self._on_pmd_info)
-        self._lcm.subscribe("PM_ORDERS", self._on_pmd_orders)
+        self._zcm = zcm_obj
+        self._zcm_thread = None
+        self._zcm_thread_obj = None
+        if self._zcm is None:
+            self._zcm = zcm.ZCM()
+            self._zcm_thread_obj = threading.Thread(target = self._zcm_thread)
+        self._zcm.subscribe("PM_INFO", self._on_pmd_info)
+        self._zcm.subscribe("PM_ORDERS", self._on_pmd_orders)
         self._deputies = {}
         self._is_observer = False
         self._id = platform.node() + ":" + str(os.getpid()) + \
@@ -560,7 +560,7 @@ class Sheriff(object):
         discover_msg.utime = _now_utime()
         discover_msg.transmitter_id = self._id
         discover_msg.nonce = 0
-        self._lcm.publish("PM_DISCOVER", discover_msg.encode())
+        self._zcm.publish("PM_DISCOVER", discover_msg.encode())
 
         # Create a worker thread for periodically publishing orders
         self._worker_thread_obj = threading.Thread(target = self._worker_thread)
@@ -648,7 +648,7 @@ class Sheriff(object):
             self._listeners.remove(sheriff_listener)
 
     def _on_pmd_info(self, _, data):
-        # LCM callback. self._lock is not acquired
+        # ZCM callback. self._lock is not acquired
         try:
             info_msg = deputy_info_t.decode(data)
         except ValueError:
@@ -676,7 +676,7 @@ class Sheriff(object):
             self._maybe_emit_status_change_signals(deputy, status_changes)
 
     def _on_pmd_orders(self, _, data):
-        # LCM callback. self._lock is not acquired
+        # ZCM callback. self._lock is not acquired
         try:
             orders_msg = orders_t.decode(data)
         except ValueError:
@@ -702,9 +702,9 @@ class Sheriff(object):
         # wait for worker thread to exit.
         self._worker_thread_obj.join()
 
-        # wait for LCM thread to exit.
-        if self._lcm_thread_obj:
-            self._lcm_thread_obj.join()
+        # wait for ZCM thread to exit.
+        if self._zcm_thread_obj:
+            self._zcm_thread_obj.join()
 
     def _send_orders(self):
         """Transmit orders to all deputies.  Call this method for the sheriff
@@ -724,7 +724,7 @@ class Sheriff(object):
             # only send orders to a deputy if we've heard from it.
             if deputy._last_update_utime > 0:
                 msg = deputy._make_orders_message(self._id)
-                self._lcm.publish("PM_ORDERS", msg.encode())
+                self._zcm.publish("PM_ORDERS", msg.encode())
 
     def _add_command(self, command_id, deputy_id, exec_str,
                     group_name, auto_respawn, stop_signal, stop_time_allowed):
@@ -1108,9 +1108,9 @@ class Sheriff(object):
                     group = config_obj.get_group(cmd._group, True)
                     group.add_command(cmd_node)
 
-    def _lcm_thread(self):
+    def _zcm_thread(self):
         while not self._exiting:
-            self._lcm.handle_timeout(200)
+            self._zcm.handle_timeout(200)
 
     def _worker_thread(self):
         send_interval = 1.0

@@ -24,7 +24,7 @@ sheriff/deputy communications protocol, but the most commonly used sheriff is
 the `procman-sheriff` GUI tool provided with Procman.  The Procman Python API
 can also be used to implement a custom sheriff.
 
-Sheriffs and deputies [communicate via LCM](\ref procman_comms), a UDP
+Sheriffs and deputies [communicate via ZCM](\ref procman_comms), a UDP
 multicast-based communications protocol.  All communications are stateless,
 which enables sheriffs and deputies to work together more easily in the
 presence of network and communication dropouts.
@@ -52,5 +52,5 @@ The sheriff can also be run from the command line without a GUI.
 transmitting commands, and simply displays the state of the deputies.  Observer
 mode is useful in situations where you want to simply observe the state of a
 running system.  Examples of this include situations where the active sheriff
-is running without a GUI, and also when replaying an LCM log file that contains
-deputy status message (using the LCM log playback tools).
+is running without a GUI, and also when replaying an ZCM log file that contains
+deputy status message (using the ZCM log playback tools).

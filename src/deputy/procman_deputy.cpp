@@ -20,12 +20,12 @@
 
 #include "procman_deputy.hpp"
 
-using procman_lcm::cmd_desired_t;
-using procman_lcm::deputy_info_t;
-using procman_lcm::output_t;
-using procman_lcm::discovery_t;
-using procman_lcm::deputy_info_t;
-using procman_lcm::orders_t;
+using procman_zcm::cmd_desired_t;
+using procman_zcm::deputy_info_t;
+using procman_zcm::output_t;
+using procman_zcm::discovery_t;
+using procman_zcm::deputy_info_t;
+using procman_zcm::orders_t;
 
 namespace procman {
 
@@ -120,7 +120,7 @@ DeputyOptions DeputyOptions::Defaults() {
 
 ProcmanDeputy::ProcmanDeputy(const DeputyOptions& options) :
   options_(options),
-  lcm_(nullptr),
+  zcm_(nullptr),
   event_loop_(),
   deputy_id_(options.deputy_id),
   cpu_load_(-1),
@@ -133,7 +133,7 @@ ProcmanDeputy::ProcmanDeputy(const DeputyOptions& options) :
   one_second_timer_(),
   introspection_timer_(),
   quit_timer_(),
-  lcm_notifier_(nullptr),
+  zcm_notifier_(nullptr),
   commands_(),
   exiting_(false),
   last_output_transmit_utime_(0),
@@ -141,16 +141,16 @@ ProcmanDeputy::ProcmanDeputy(const DeputyOptions& options) :
   output_msg_() {
   pm_ = new Procman();
 
-  // Initialize LCM
-  lcm_ = new lcm::LCM(options.lcm_url);
-  if (!lcm_) {
-    // throw std::runtime_error("error initializing LCM.");
+  // Initialize ZCM
+  zcm_ = new zcm::ZCM(options.zcm_url);
+  if (!zcm_) {
+    // throw std::runtime_error("error initializing ZCM.");
   }
 
-  // Setup initial LCM subscriptions
-  info_sub_ = lcm_->subscribe("PM_INFO", &ProcmanDeputy::InfoReceived, this);
+  // Setup initial ZCM subscriptions
+  info_sub_ = zcm_->subscribe("PM_INFO", &ProcmanDeputy::InfoReceived, this);
 
-  discovery_sub_ = lcm_->subscribe("PM_DISCOVER",
+  discovery_sub_ = zcm_->subscribe("PM_DISCOVER",
       &ProcmanDeputy::DiscoveryReceived, this);
 
   // Setup timers
@@ -175,8 +175,9 @@ ProcmanDeputy::ProcmanDeputy(const DeputyOptions& options) :
   event_loop_.SetPosixSignals({ SIGINT, SIGHUP, SIGQUIT, SIGTERM, SIGCHLD },
       std::bind(&ProcmanDeputy::OnPosixSignal, this, std::placeholders::_1));
 
-  lcm_notifier_ = event_loop_.AddSocket(lcm_->getFileno(),
-      EventLoop::kRead, [this]() { lcm_->handle(); });
+  // zcm_notifier_ = event_loop_.AddSocket(zcm_->getFileno(),
+  //     EventLoop::kRead, [this]() { zcm_->handle(); });
+  zcm_->start();
 
   output_msg_.deputy_id = deputy_id_;
   output_msg_.num_commands = 0;
@@ -187,18 +188,18 @@ ProcmanDeputy::ProcmanDeputy(const DeputyOptions& options) :
 ProcmanDeputy::~ProcmanDeputy() {
   // unsubscribe
   if(orders_sub_) {
-    lcm_->unsubscribe(orders_sub_);
+    zcm_->unsubscribe(orders_sub_);
   }
   if(info_sub_) {
-    lcm_->unsubscribe(info_sub_);
+    zcm_->unsubscribe(info_sub_);
   }
   if(discovery_sub_) {
-    lcm_->unsubscribe(discovery_sub_);
+    zcm_->unsubscribe(discovery_sub_);
   }
   for (auto item : commands_) {
     delete item.second;
   }
-  delete lcm_;
+  delete zcm_;
   delete pm_;
 }
 
@@ -250,7 +251,7 @@ void ProcmanDeputy::MaybePublishOutputMessage() {
 
   if (output_buf_size_ > 4096 || (ms_since_last_transmit >= 10)) {
     output_msg_.utime = timestamp_now();
-    lcm_->publish("PM_OUTPUT", &output_msg_);
+    zcm_->publish("PM_OUTPUT", &output_msg_);
     output_msg_.num_commands = 0;
     output_msg_.command_ids.clear();
     output_msg_.text.clear();
@@ -465,7 +466,7 @@ void ProcmanDeputy::TransmitProcessInfo() {
   if (options_.verbose) {
     dbgt ("transmitting deputy info!\n");
   }
-  lcm_->publish("PM_INFO", &msg);
+  zcm_->publish("PM_INFO", &msg);
 }
 
 void ProcmanDeputy::UpdateCpuTimes() {
@@ -606,7 +607,7 @@ static const cmd_desired_t* OrdersFindCmd (const orders_t* orders,
   return nullptr;
 }
 
-void ProcmanDeputy::OrdersReceived(const lcm::ReceiveBuffer* rbuf,
+void ProcmanDeputy::OrdersReceived(const zcm::ReceiveBuffer* rbuf,
     const std::string& channel,
     const orders_t* orders) {
   // ignore orders if we're exiting
@@ -790,7 +791,7 @@ void ProcmanDeputy::OrdersReceived(const lcm::ReceiveBuffer* rbuf,
   }
 }
 
-void ProcmanDeputy::DiscoveryReceived(const lcm::ReceiveBuffer* rbuf,
+void ProcmanDeputy::DiscoveryReceived(const zcm::ReceiveBuffer* rbuf,
     const std::string& channel, const discovery_t* msg) {
   const int64_t now = timestamp_now();
   if(now < deputy_start_time_ + DISCOVERY_TIME_MS * 1000) {
@@ -808,7 +809,7 @@ void ProcmanDeputy::DiscoveryReceived(const lcm::ReceiveBuffer* rbuf,
   }
 }
 
-void ProcmanDeputy::InfoReceived(const lcm::ReceiveBuffer* rbuf,
+void ProcmanDeputy::InfoReceived(const zcm::ReceiveBuffer* rbuf,
     const std::string& channel, const deputy_info_t* msg) {
   int64_t now = timestamp_now();
   if(now < deputy_start_time_ + DISCOVERY_TIME_MS * 1000) {
@@ -832,7 +833,7 @@ void ProcmanDeputy::OnDiscoveryTimer() {
     msg.utime = now;
     msg.transmitter_id = deputy_id_;
     msg.nonce = deputy_pid_;
-    lcm_->publish("PM_DISCOVER", &msg);
+    zcm_->publish("PM_DISCOVER", &msg);
   } else {
 //    dbgt("Discovery period finished. Activating deputy.");
 
@@ -840,10 +841,10 @@ void ProcmanDeputy::OnDiscoveryTimer() {
     // start subscribing to sheriff orders.
     discovery_timer_->Stop();
 
-    lcm_->unsubscribe(info_sub_);
+    zcm_->unsubscribe(info_sub_);
     info_sub_ = NULL;
 
-    orders_sub_ = lcm_->subscribe("PM_ORDERS",
+    orders_sub_ = zcm_->subscribe("PM_ORDERS",
         &ProcmanDeputy::OrdersReceived, this);
 
     // Start the timer to periodically transmit status information
@@ -859,7 +860,7 @@ static void usage() {
             "  -v, --verbose     verbose output\n"
             "  -i, --id NAME   use deputy id NAME instead of hostname\n"
             "  -l, --log PATH    dump messages to PATH instead of stdout\n"
-            "  -u, --lcmurl URL  use specified LCM URL for procman messages\n"
+            "  -u, --zcmurl URL  use specified ZCM URL for procman messages\n"
             "\n"
             "DEPUTY ID\n"
             "  The deputy id must be unique from other deputies.  On startup,\n"
@@ -884,7 +885,7 @@ int main (int argc, char **argv) {
     { "help", no_argument, 0, 'h' },
     { "verbose", no_argument, 0, 'v' },
     { "log", required_argument, 0, 'l' },
-    { "lcmurl", required_argument, 0, 'u' },
+    { "zcmurl", required_argument, 0, 'u' },
     { "id", required_argument, 0, 'i' },
     { 0, 0, 0, 0 }
   };
@@ -903,7 +904,7 @@ int main (int argc, char **argv) {
         logfilename = strdup (optarg);
         break;
       case 'u':
-        dep_options.lcm_url = optarg;
+        dep_options.zcm_url = optarg;
         break;
       case 'i':
         deputy_id_override = optarg;

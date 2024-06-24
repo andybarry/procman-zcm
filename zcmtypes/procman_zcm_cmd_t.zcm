@@ -1,4 +1,4 @@
-package procman_lcm;
+package procman_zcm;
 
 struct cmd_t {
     // Uniquely identifies the command

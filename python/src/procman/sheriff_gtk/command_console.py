@@ -10,7 +10,7 @@ from gi.repository import Gdk
 from gi.repository import Pango
 
 from procman.sheriff import SheriffListener
-from procman_lcm.output_t import output_t
+from procman_zcm.output_t import output_t
 
 DEFAULT_MAX_KB_PER_SECOND = 500
 

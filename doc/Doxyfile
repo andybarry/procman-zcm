@@ -20,8 +20,8 @@ EXCLUDE_SYMBOLS        = ScriptExecutionContext \
                          WaitStatusAction \
                          StartStopRestartAction
 
-EXAMPLE_PATH           = ../lcmtypes
-EXAMPLE_PATTERNS       = *.lcm
+EXAMPLE_PATH           = ../zcmtypes
+EXAMPLE_PATTERNS       = *.zcm
 
 IMAGE_PATH             = images
 INPUT_FILTER           =

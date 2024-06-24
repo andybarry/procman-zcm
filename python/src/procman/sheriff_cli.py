@@ -5,13 +5,13 @@ import subprocess
 import sys
 import time
 
-import lcm
-from procman_lcm.cmd_t import cmd_t
-from procman_lcm.deputy_info_t import deputy_info_t
-from procman_lcm.orders_t import orders_t
-from procman_lcm.cmd_desired_t import cmd_desired_t
-from procman_lcm.cmd_status_t import cmd_status_t
-from procman_lcm.discovery_t import discovery_t
+import zcm
+from procman_zcm.cmd_t import cmd_t
+from procman_zcm.deputy_info_t import deputy_info_t
+from procman_zcm.orders_t import orders_t
+from procman_zcm.cmd_desired_t import cmd_desired_t
+from procman_zcm.cmd_status_t import cmd_status_t
+from procman_zcm.discovery_t import discovery_t
 
 from procman.sheriff_script import ScriptManager, ScriptListener
 from procman.sheriff import Sheriff
@@ -35,8 +35,8 @@ def find_procman_deputy_cmd():
     return None
 
 class SheriffHeadless(ScriptListener):
-    def __init__(self, lcm_obj, config, spawn_deputy, script_name, script_done_action):
-        self.sheriff = Sheriff(lcm_obj)
+    def __init__(self, zcm_obj, config, spawn_deputy, script_name, script_done_action):
+        self.sheriff = Sheriff(zcm_obj)
         self.script_manager = ScriptManager(self.sheriff)
         self.spawn_deputy = spawn_deputy
         self.spawned_deputy = None
@@ -44,7 +44,7 @@ class SheriffHeadless(ScriptListener):
         self.script_name = script_name
         self.script = None
         self.mainloop = None
-        self.lcm_obj = lcm_obj
+        self.zcm_obj = zcm_obj
         self._should_exit = False
         if script_done_action is None:
             self.script_done_action = "exit"
@@ -128,7 +128,7 @@ class SheriffHeadless(ScriptListener):
                 self._start_script()
 
             while not self._should_exit:
-                self.lcm_obj.handle_timeout(200)
+                self.zcm_obj.handle_timeout(200)
         except KeyboardInterrupt:
             pass
         except IOError:
@@ -219,9 +219,9 @@ def main():
             print("Lone ranger mode and observer mode are mutually exclusive.")
             sys.exit(1)
 
-    lcm_obj = LCM()
+    zcm_obj = ZCM()
 
-    SheriffHeadless(lcm_obj, cfg, spawn_deputy, script_name, script_done_action).run()
+    SheriffHeadless(zcm_obj, cfg, spawn_deputy, script_name, script_done_action).run()
 
 if __name__ == "__main__":
     main()

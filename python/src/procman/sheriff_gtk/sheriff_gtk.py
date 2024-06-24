@@ -11,7 +11,7 @@ import traceback
 
 import gi
 
-from lcm import LCM
+from zcm import ZCM
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import GLib
@@ -83,8 +83,8 @@ def split_script_name(name):
 
 
 class SheriffGtk(SheriffListener):
-    def __init__(self, lcm_obj):
-        self.lcm_obj = lcm_obj
+    def __init__(self, zcm_obj):
+        self.zcm_obj = zcm_obj
         self.cmds_update_scheduled = False
         self.config_filename = None
         self.script_done_action = None
@@ -93,7 +93,7 @@ class SheriffGtk(SheriffListener):
         self.spawned_deputy = None
 
         # create sheriff and subscribe to events
-        self.sheriff = Sheriff(self.lcm_obj)
+        self.sheriff = Sheriff(self.zcm_obj)
         self.sheriff.add_listener(self)
 
         self.script_manager = ScriptManager(self.sheriff)
@@ -201,7 +201,7 @@ class SheriffGtk(SheriffListener):
         GObject.timeout_add(1000, lambda *_: self.deputies_ts.update() or True)
 
         # stdout textview
-        self.cmd_console = cc.SheriffCommandConsole(self.sheriff, self.lcm_obj)
+        self.cmd_console = cc.SheriffCommandConsole(self.sheriff, self.zcm_obj)
         vpane.add2(self.cmd_console)
 
         # status bar
@@ -790,19 +790,19 @@ def main():
             print("Lone ranger mode and observer mode are mutually exclusive.")
             sys.exit(1)
 
-    lcm_obj = LCM()
+    zcm_obj = ZCM()
     def handle(*a):
         try:
-            lcm_obj.handle()
+            zcm_obj.handle()
         except Exception:
             traceback.print_exc()
         return True
-    GObject.io_add_watch(lcm_obj, GObject.IO_IN, handle)
+    GObject.io_add_watch(zcm_obj, GObject.IO_IN, handle)
     GObject.threads_init()
 
 
     if args.use_gui:
-        gui = SheriffGtk(lcm_obj)
+        gui = SheriffGtk(zcm_obj)
         if args.observer:
             gui.sheriff.set_observer(True)
         if args.spawn_deputy:
@@ -856,7 +856,7 @@ def main():
             print("No script specified and running in headless mode.  Exiting")
             sys.exit(1)
         SheriffHeadless(
-            lcm_obj, cfg, args.spawn_deputy, args.script, args.script_done_action
+            zcm_obj, cfg, args.spawn_deputy, args.script, args.script_done_action
         ).run()
 
 

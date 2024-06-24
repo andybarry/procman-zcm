@@ -5,13 +5,13 @@ add_executable(procman-deputy
     procman_deputy.cpp)
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(LCM REQUIRED lcm)
-include_directories(${LCM_INCLUDE_DIRS})
+pkg_check_modules(ZCM REQUIRED zcm)
+include_directories(${ZCM_INCLUDE_DIRS})
 
 target_link_libraries(procman-deputy
                       procman
-                      procman_lcmtypes
-                      ${LCM_LDFLAGS})
+                      procman_zcmtypes
+                      ${ZCM_LDFLAGS})
 
 install(TARGETS procman-deputy DESTINATION bin)
 

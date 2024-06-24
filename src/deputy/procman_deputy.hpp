@@ -4,12 +4,12 @@
 #include <set>
 #include <string>
 
-#include <lcm/lcm-cpp.hpp>
+#include <zcm/zcm-cpp.hpp>
 
-#include <lcmtypes/procman_lcm/orders_t.hpp>
-#include <lcmtypes/procman_lcm/discovery_t.hpp>
-#include <lcmtypes/procman_lcm/deputy_info_t.hpp>
-#include <lcmtypes/procman_lcm/output_t.hpp>
+#include <zcmtypes/procman_zcm/orders_t.hpp>
+#include <zcmtypes/procman_zcm/discovery_t.hpp>
+#include <zcmtypes/procman_zcm/deputy_info_t.hpp>
+#include <zcmtypes/procman_zcm/output_t.hpp>
 
 #include "event_loop.hpp"
 #include "procman/procman.hpp"
@@ -22,7 +22,7 @@ struct DeputyOptions {
   static DeputyOptions Defaults();
 
   std::string deputy_id;
-  std::string lcm_url;
+  std::string zcm_url;
   bool verbose;
 };
 
@@ -34,12 +34,12 @@ class ProcmanDeputy {
     void Run();
 
   private:
-    void OrdersReceived(const lcm::ReceiveBuffer* rbuf, const std::string& channel,
-        const procman_lcm::orders_t* orders);
-    void DiscoveryReceived(const lcm::ReceiveBuffer* rbuf,
-        const std::string& channel, const procman_lcm::discovery_t* msg);
-    void InfoReceived(const lcm::ReceiveBuffer* rbuf,
-        const std::string& channel, const procman_lcm::deputy_info_t* msg);
+    void OrdersReceived(const zcm::ReceiveBuffer* rbuf, const std::string& channel,
+        const procman_zcm::orders_t* orders);
+    void DiscoveryReceived(const zcm::ReceiveBuffer* rbuf,
+        const std::string& channel, const procman_zcm::discovery_t* msg);
+    void InfoReceived(const zcm::ReceiveBuffer* rbuf,
+        const std::string& channel, const procman_zcm::deputy_info_t* msg);
 
     void OnDiscoveryTimer();
 
@@ -75,7 +75,7 @@ class ProcmanDeputy {
 
     Procman* pm_;
 
-    lcm::LCM* lcm_;
+    zcm::ZCM* zcm_;
 
     EventLoop event_loop_;
 
@@ -87,9 +87,9 @@ class ProcmanDeputy {
     int64_t deputy_start_time_;
     pid_t deputy_pid_;
 
-    lcm::Subscription* discovery_sub_;
-    lcm::Subscription* info_sub_;
-    lcm::Subscription* orders_sub_;
+    zcm::Subscription* discovery_sub_;
+    zcm::Subscription* info_sub_;
+    zcm::Subscription* orders_sub_;
 
     TimerPtr discovery_timer_;
     TimerPtr one_second_timer_;
@@ -97,7 +97,7 @@ class ProcmanDeputy {
     TimerPtr quit_timer_;
     TimerPtr check_output_msg_timer_;
 
-    SocketNotifierPtr lcm_notifier_;
+    SocketNotifierPtr zcm_notifier_;
 
     std::map<ProcmanCommandPtr, DeputyCommand*> commands_;
 
@@ -105,7 +105,7 @@ class ProcmanDeputy {
 
     int64_t last_output_transmit_utime_;
     int output_buf_size_;
-    procman_lcm::output_t output_msg_;
+    procman_zcm::output_t output_msg_;
 };
 
 }  // namespace procman

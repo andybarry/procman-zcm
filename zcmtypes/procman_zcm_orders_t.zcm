@@ -1,4 +1,4 @@
-package procman_lcm;
+package procman_zcm;
 
 /*
    message sent by the procman sheriff to provide instructions for a procman
