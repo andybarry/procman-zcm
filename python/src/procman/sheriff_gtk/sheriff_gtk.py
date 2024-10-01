@@ -32,6 +32,8 @@ import procman.sheriff_gtk.deputies_treeview as ht
 
 from procman.sheriff_cli import SheriffHeadless, find_procman_deputy_cmd
 
+from procman_zcm.run_script_t import run_script_t
+
 try:
     from procman.build_prefix import BUILD_PREFIX
 except ImportError:
@@ -98,6 +100,8 @@ class SheriffGtk(SheriffListener):
 
         self.script_manager = ScriptManager(self.sheriff)
         self.script_manager.add_listener(self)
+
+        self.zcm_obj.subscribe("PM_RUN_SCRIPT", run_script_t, self._on_run_script)
 
         # setup GUI
 
@@ -226,6 +230,10 @@ class SheriffGtk(SheriffListener):
         # and then periodically
         GObject.timeout_add(1000, self._check_spawned_deputy)
         GObject.timeout_add(1000, lambda *_: self._schedule_cmds_update() or True)
+
+    def _on_run_script(self, channel_name, msg):
+        script = self.script_manager.get_script(msg.script_name)
+        self.run_script(None, script, None)
 
     def command_added(self, deputy_obj, cmd_obj):
         self._schedule_cmds_update()

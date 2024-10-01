@@ -543,11 +543,11 @@ class Sheriff(object):
         the user is expected to call ZCM.handle().
         """
         self._zcm = zcm_obj
-        self._zcm_thread = None
-        self._zcm_thread_obj = None
+        self._owns_zcm = False
         if self._zcm is None:
             self._zcm = zcm.ZCM()
-            self._zcm_thread_obj = threading.Thread(target = self._zcm_thread)
+            self._owns_zcm = True
+            self._zcm.start()
         self._zcm.subscribe("PM_INFO", deputy_info_t, self._on_pmd_info)
         self._zcm.subscribe("PM_ORDERS", orders_t, self._on_pmd_orders)
         self._deputies = {}
@@ -702,9 +702,9 @@ class Sheriff(object):
         # wait for worker thread to exit.
         self._worker_thread_obj.join()
 
-        # wait for ZCM thread to exit.
-        if self._zcm_thread_obj:
-            self._zcm_thread_obj.join()
+        if self._owns_zcm:
+            self._zcm.stop()
+            del self._zcm
 
     def _send_orders(self):
         """Transmit orders to all deputies.  Call this method for the sheriff
@@ -1106,10 +1106,6 @@ class Sheriff(object):
 
                     group = config_obj.get_group(cmd._group, True)
                     group.add_command(cmd_node)
-
-    def _zcm_thread(self):
-        while not self._exiting:
-            self._zcm.handle_timeout(200)
 
     def _worker_thread(self):
         send_interval = 1.0

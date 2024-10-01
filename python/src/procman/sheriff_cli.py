@@ -5,6 +5,8 @@ import subprocess
 import sys
 import time
 
+os.system("echo $PYTHONPATH")
+
 import zerocm as zcm
 from procman_zcm.cmd_t import cmd_t
 from procman_zcm.deputy_info_t import deputy_info_t
@@ -12,6 +14,7 @@ from procman_zcm.orders_t import orders_t
 from procman_zcm.cmd_desired_t import cmd_desired_t
 from procman_zcm.cmd_status_t import cmd_status_t
 from procman_zcm.discovery_t import discovery_t
+from procman_zcm.run_script_t import run_script_t
 
 from procman.sheriff_script import ScriptManager, ScriptListener
 from procman.sheriff import Sheriff
@@ -51,6 +54,8 @@ class SheriffHeadless(ScriptListener):
         else:
             self.script_done_action = script_done_action
 
+        self.zcm_obj.subscribe("PM_RUN_SCRIPT", run_script_t, self._on_run_script_msg)
+
     def _shutdown(self):
         if self.spawned_deputy:
             print("Terminating local deputy..")
@@ -62,6 +67,20 @@ class SheriffHeadless(ScriptListener):
         self.spawned_deputy = None
         self.sheriff.shutdown()
         self.script_manager.shutdown()
+        del self.zcm_obj
+
+    def _on_run_script_msg(self, channel, msg):
+        self.script = self.script_manager.get_script(msg.script_name)
+        if not self.script:
+            print("No such script: %s" % msg.script_name)
+            return
+        errors = self.script_manager.check_script_for_errors(self.script)
+        if errors:
+            print("Unable to run script.  Errors were detected:\n\n")
+            print("\n    ".join(errors))
+            return
+        self.script_manager.add_listener(self)
+        self._start_script()
 
     def _start_script(self):
         if not self.script:
@@ -86,6 +105,7 @@ class SheriffHeadless(ScriptListener):
         self._should_exit = True
 
     def run(self):
+        self.zcm_obj.start()
         # parse the config file
         if self.config is not None:
             self.sheriff.load_config(self.config)
@@ -128,7 +148,7 @@ class SheriffHeadless(ScriptListener):
                 self._start_script()
 
             while not self._should_exit:
-                self.zcm_obj.handle_timeout(200)
+                time.sleep(1) # do nothing, ZCM handle is in another thread.
         except KeyboardInterrupt:
             pass
         except IOError:

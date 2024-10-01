@@ -84,6 +84,7 @@ ZCM Channel | Message type | Description
 ------------|--------------|------------
 `PM_INFO` | [deputy_info_t](\ref procman_zcm_deputy_info_t) | When received, the sheriff updates its internal representation of a deputy's actual state.
 `PM_OUTPUT` | [output_t](\ref procman_zcm_output_t) | Contains the console output produced by a deputy-managed command.  When received, the sheriff may display a command's output to the user.  Subscribing to this channel is optional for a sheriff.
+`PM_RUN_SCRIPT` | [run_script_t](\ref procman_zcm_run_script_t) | Can be sent by anyone and will cause the sheriff to execute a script.
 
 
 # Appendix - message definitions {#procman_zcm_message_defs}
