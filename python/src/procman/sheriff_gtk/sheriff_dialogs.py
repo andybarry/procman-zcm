@@ -4,7 +4,7 @@ import signal
 
 from gi.repository import GObject
 from gi.repository import Gtk
-from gi.repository import Gdk
+from gi.repository import Gdk, Pango
 
 from procman.sheriff_config import Parser, ScriptNode
 from procman.sheriff_script import SheriffScript, ScriptManager
@@ -315,6 +315,10 @@ class AddModifyScriptDialog(Gtk.Dialog):
         self.script_tv = Gtk.TextView()
         self.script_tv.set_editable(True)
         self.script_tv.set_accepts_tab(False)
+        # Set fixed-width font for script_tv
+        font_desc = Pango.FontDescription("Monospace 10")
+        self.script_tv.override_font(font_desc)
+
         if script is not None:
             self.script_tv.get_buffer().set_text(str(script))
         else:
@@ -329,6 +333,7 @@ class AddModifyScriptDialog(Gtk.Dialog):
         help_tv = Gtk.TextView()
         help_tv.set_editable(False)
         help_tv.set_sensitive(False)
+        help_tv.override_font(font_desc)
         help_tv.get_buffer().set_text(
             """
     Example commands:

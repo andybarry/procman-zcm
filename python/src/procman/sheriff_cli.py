@@ -14,7 +14,7 @@ from procman_zcm.orders_t import orders_t
 from procman_zcm.cmd_desired_t import cmd_desired_t
 from procman_zcm.cmd_status_t import cmd_status_t
 from procman_zcm.discovery_t import discovery_t
-from procman_zcm.run_script_t import run_script_t
+from procman_zcm.request_to_sheriff_t import request_to_sheriff_t
 
 from procman.sheriff_script import ScriptManager, ScriptListener
 from procman.sheriff import Sheriff
@@ -54,7 +54,7 @@ class SheriffHeadless(ScriptListener):
         else:
             self.script_done_action = script_done_action
 
-        self.zcm_obj.subscribe("PM_RUN_SCRIPT", run_script_t, self._on_run_script_msg)
+        self.zcm_obj.subscribe("PM_REQUEST_TO_SHERIFF", request_to_sheriff_t, self._on_request_to_sheriff)
 
     def _shutdown(self):
         if self.spawned_deputy:
@@ -69,18 +69,39 @@ class SheriffHeadless(ScriptListener):
         self.script_manager.shutdown()
         del self.zcm_obj
 
-    def _on_run_script_msg(self, channel, msg):
+    def _on_request_to_sheriff(self, channel_name, msg):
+        for i in range(msg.num_commands):
+            if msg.command[i] == request_to_sheriff_t.CMD_START:
+                cmd = self.sheriff.get_command(msg.command_or_script_name[i])
+                self.sheriff.start_command(cmd)
+            elif msg.command[i] == request_to_sheriff_t.CMD_STOP:
+                cmd = self.sheriff.get_command(msg.command_or_script_name[i])
+                self.sheriff.stop_command(cmd)
+            elif msg.command[i] == request_to_sheriff_t.CMD_RESTART:
+                cmd = self.sheriff.get_command(msg.command_or_script_name[i])
+                self.sheriff.restart_command(cmd)
+
+            elif msg.command[i] == request_to_sheriff_t.CMD_RUN_SCRIPT:
+                self.script = self.script_manager.get_script(msg.command_or_script_name[i])
+                if not self.script:
+                    print("No such script: %s" % msg.command_or_script_name[i])
+                    return
+                errors = self.script_manager.check_script_for_errors(self.script)
+                if errors:
+                    print("Unable to run script.  Errors were detected:\n\n")
+                    print("\n    ".join(errors))
+                    return
+                self.script_manager.add_listener(self)
+                self._start_script()
+            elif msg.command[i] == request_to_sheriff_t.CMD_ABORT_SCRIPT:
+                self.script_manager.abort_script()
+            else:
+                print("ERROR: Unknown command type: %d" % msg.command[i])
+                return
+
+    def _on_cmd_to_sheriff(self, channel, msg):
         self.script = self.script_manager.get_script(msg.script_name)
-        if not self.script:
-            print("No such script: %s" % msg.script_name)
-            return
-        errors = self.script_manager.check_script_for_errors(self.script)
-        if errors:
-            print("Unable to run script.  Errors were detected:\n\n")
-            print("\n    ".join(errors))
-            return
-        self.script_manager.add_listener(self)
-        self._start_script()
+        
 
     def _start_script(self):
         if not self.script:

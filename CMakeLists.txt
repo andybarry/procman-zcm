@@ -22,7 +22,7 @@ zcmtypes_build(INCLUDE_BUILD_PATH ${INCLUDE_OUTPUT_PATH}
                zcmtypes/procman_zcm_orders_t.zcm
                zcmtypes/procman_zcm_output_t.zcm
                zcmtypes/procman_zcm_cmd_desired_t.zcm
-               zcmtypes/procman_zcm_run_script_t.zcm)
+               zcmtypes/procman_zcm_request_to_sheriff_t.zcm)
 
 add_subdirectory(src)
 add_subdirectory(python)

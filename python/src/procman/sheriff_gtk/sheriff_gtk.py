@@ -32,7 +32,7 @@ import procman.sheriff_gtk.deputies_treeview as ht
 
 from procman.sheriff_cli import SheriffHeadless, find_procman_deputy_cmd
 
-from procman_zcm.run_script_t import run_script_t
+from procman_zcm.request_to_sheriff_t import request_to_sheriff_t
 
 try:
     from procman.build_prefix import BUILD_PREFIX
@@ -101,7 +101,7 @@ class SheriffGtk(SheriffListener):
         self.script_manager = ScriptManager(self.sheriff)
         self.script_manager.add_listener(self)
 
-        self.zcm_obj.subscribe("PM_RUN_SCRIPT", run_script_t, self._on_run_script)
+        self.zcm_obj.subscribe("PM_REQUEST_TO_SHERIFF", request_to_sheriff_t, self._on_request_to_sheriff)
 
         # setup GUI
 
@@ -231,9 +231,29 @@ class SheriffGtk(SheriffListener):
         GObject.timeout_add(1000, self._check_spawned_deputy)
         GObject.timeout_add(1000, lambda *_: self._schedule_cmds_update() or True)
 
-    def _on_run_script(self, channel_name, msg):
-        script = self.script_manager.get_script(msg.script_name)
-        self.run_script(None, script, None)
+    def _on_request_to_sheriff(self, channel_name, msg):
+        for i in range(msg.num_commands):
+            if msg.command[i] == request_to_sheriff_t.CMD_START:
+                cmd = self.sheriff.get_command(msg.command_or_script_name[i])
+                self.sheriff.start_command(cmd)
+            elif msg.command[i] == request_to_sheriff_t.CMD_STOP:
+                cmd = self.sheriff.get_command(msg.command_or_script_name[i])
+                self.sheriff.stop_command(cmd)
+            elif msg.command[i] == request_to_sheriff_t.CMD_RESTART:
+                cmd = self.sheriff.get_command(msg.command_or_script_name[i])
+                self.sheriff.restart_command(cmd)
+
+            elif msg.command[i] == request_to_sheriff_t.CMD_RUN_SCRIPT:
+                script = self.script_manager.get_script(msg.command_or_script_name[i])
+                if script is None:
+                    print("WARNING: No such script: %s" % msg.command_or_script_name[i])
+                self.run_script(None, script, None)
+            elif msg.command[i] == request_to_sheriff_t.CMD_ABORT_SCRIPT:
+                # script = self.script_manager.get_script(msg.msg.command_or_script_name[i])
+                self.script_manager.abort_script()
+            else:
+                print("ERROR: Unknown command type: %d" % msg.command[i])
+                return
 
     def command_added(self, deputy_obj, cmd_obj):
         self._schedule_cmds_update()

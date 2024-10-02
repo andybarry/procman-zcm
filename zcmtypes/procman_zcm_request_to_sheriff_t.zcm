@@ -1,0 +1,16 @@
+package procman_zcm;
+
+/*
+   Message sent by anyone to the sheriff to request a command to be started, stopped, or restarted.  Can also request that a script be run or aborted.
+*/
+
+struct request_to_sheriff_t {
+    int64_t utime;
+
+    const int8_t CMD_START = 0, CMD_STOP = 1, CMD_RESTART = 2, CMD_RUN_SCRIPT = 3, CMD_ABORT_SCRIPT = 4;
+
+    int32_t num_commands;
+
+    int8_t command[num_commands];
+    string command_or_script_name[num_commands];
+}
