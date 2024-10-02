@@ -761,7 +761,7 @@ def main():
     )
 
     if "-o" not in sys.argv:
-        parser.add_argument("procman_config_file", help="The configuration file to load")
+        parser.add_argument("procman_config_file", nargs='?', help="The configuration file to load")
 
     parser.add_argument(
         "--script", help="A script to execute after the config file is loaded."
@@ -807,7 +807,7 @@ def main():
     # Parse only known args, ignore unknown_args
     args, _ = parser.parse_known_args(sys.argv[1:])
 
-    if hasattr(args, "procman_config_file"):
+    if hasattr(args, "procman_config_file") and args.procman_config_file:
         try:
             cfg = sheriff.load_config_file(open(args.procman_config_file))
         except Exception as xcp:
