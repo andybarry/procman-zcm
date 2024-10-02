@@ -7,7 +7,7 @@ import time
 
 os.system("echo $PYTHONPATH")
 
-import zerocm as zcm
+import zerocm
 from procman_zcm.cmd_t import cmd_t
 from procman_zcm.deputy_info_t import deputy_info_t
 from procman_zcm.orders_t import orders_t
@@ -260,7 +260,7 @@ def main():
             print("Lone ranger mode and observer mode are mutually exclusive.")
             sys.exit(1)
 
-    zcm_obj = ZCM()
+    zcm_obj = zerocm.ZCM()
 
     SheriffHeadless(zcm_obj, cfg, spawn_deputy, script_name, script_done_action).run()
 

@@ -126,6 +126,7 @@ class SheriffGtk(SheriffListener):
         self.save_dlg = None
         self.load_save_dir = None
         self.cfg_to_load = None
+        self.autosave = True
 
         # options menu
         self.is_observer_cmi = self.builder.get_object("is_observer_cmi")
@@ -317,6 +318,9 @@ class SheriffGtk(SheriffListener):
     def on_quit_requested(self, *args):
         Gtk.main_quit()
 
+    def on_autosave_mi_toggled(self, checkmenuitem):
+        self.autosave = checkmenuitem.get_active()
+
     def on_start_cmd_mi_activate(self, *args):
         self.cmds_tv._start_selected_commands()
 
@@ -342,6 +346,10 @@ class SheriffGtk(SheriffListener):
         if save_settings:
             self.save_settings()
 
+        if self.autosave and self.config_filename:
+            self.save_config(self.config_filename)
+            
+
     def load_settings(self):
         if not os.path.exists(self.config_fname):
             return
@@ -355,6 +363,8 @@ class SheriffGtk(SheriffListener):
         self.cmds_tv.load_settings(d)
         self.cmd_console.load_settings(d)
         self.deputies_tv.load_settings(d)
+        self.autosave = d.get("autosave", True)
+        self.builder.get_object("autosave_mi").set_active(self.autosave)
 
     def save_settings(self):
         config_dir = os.path.join(GLib.get_user_config_dir(), "procman-sheriff")
@@ -366,6 +376,7 @@ class SheriffGtk(SheriffListener):
         self.cmds_tv.save_settings(d)
         self.cmd_console.save_settings(d)
         self.deputies_tv.save_settings(d)
+        d["autosave"] = self.autosave
 
         try:
             with open(self.config_fname, 'wb') as config_file:
@@ -666,24 +677,27 @@ class SheriffGtk(SheriffListener):
         if Gtk.ResponseType.ACCEPT == self.save_dlg.run():
             self.config_filename = self.save_dlg.get_filename()
             self.load_save_dir = os.path.dirname(self.config_filename)
-            cfg_node = sheriff_config.ConfigNode()
-            self.sheriff.save_config(cfg_node)
-            self.script_manager.save_config(cfg_node)
-            try:
-                open(self.config_filename, "w").write(str(cfg_node))
-            except OSError as e:
-                msgdlg = Gtk.MessageDialog(
-                    self.window,
-                    Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
-                    Gtk.MessageType.ERROR,
-                    Gtk.ButtonsType.CLOSE,
-                    str(e),
-                )
-                msgdlg.run()
-                msgdlg.destroy()
+            self.save_config(self.config_filename)
         self.save_dlg.hide()
         self.save_dlg.destroy()
         self.save_dlg = None
+
+    def save_config(self, filename):
+        cfg_node = sheriff_config.ConfigNode()
+        self.sheriff.save_config(cfg_node)
+        self.script_manager.save_config(cfg_node)
+        try:
+            open(filename, "w").write(str(cfg_node))
+        except OSError as e:
+            msgdlg = Gtk.MessageDialog(
+                self.window,
+                Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
+                Gtk.MessageType.ERROR,
+                Gtk.ButtonsType.CLOSE,
+                str(e),
+            )
+            msgdlg.run()
+            msgdlg.destroy()
 
     def on_is_observer_cmi_toggled(self, menu_item):
         self.sheriff.set_observer(menu_item.get_active())
@@ -845,6 +859,7 @@ def main():
                 sys.exit(1)
 
             gui.load_save_dir = os.path.dirname(args.procman_config_file)
+            gui.config_filename = args.procman_config_file
 
         if args.script:
             script = gui.script_manager.get_script(args.script)

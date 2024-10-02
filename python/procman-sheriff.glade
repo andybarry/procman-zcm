@@ -41,6 +41,15 @@
                       </object>
                     </child>
                     <child>
+                      <object class="GtkCheckMenuItem" id="autosave_mi">
+                        <property name="visible">True</property>
+                        <property name="label" translatable="yes">_Autosave config</property>
+                        <property name="use_underline">True</property>
+                        <property name="active">True</property>
+                        <signal name="toggled" handler="on_autosave_mi_toggled"/>
+                      </object>
+                    </child>
+                    <child>
                       <object class="GtkMenuItem" id="preferences_mi">
                         <property name="visible">True</property>
                         <property name="label" translatable="yes">_Preferences</property>
