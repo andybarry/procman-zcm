@@ -1048,7 +1048,7 @@ class Sheriff(object):
             assert group_node.name == cmd_node.attributes["group"]
 
             stop_signal = cmd_node.attributes["stop_signal"]
-            stop_time_allowed = cmd_node.attributes["stop_time_allowed"]
+            stop_time_allowed = int(cmd_node.attributes["stop_time_allowed"])
             if stop_signal == 0:
                 stop_signal = DEFAULT_STOP_SIGNAL
             if stop_time_allowed == 0:
@@ -1100,6 +1100,8 @@ class Sheriff(object):
                     cmd_node = sheriff_config.CommandNode()
                     cmd_node.attributes["exec"] = cmd._exec_str
                     cmd_node.attributes["command_id"] = cmd._command_id
+                    cmd_node.attributes["stop_signal"] = cmd._stop_signal.value
+                    cmd_node.attributes["stop_time_allowed"] = cmd._stop_time_allowed
                     cmd_node.attributes["deputy"] = deputy._deputy_id
                     if cmd._auto_respawn:
                         cmd_node.attributes["auto_respawn"] = "true"

@@ -8,6 +8,8 @@ TokEOF = "EOF"
 TokComment = "Comment"
 TokInteger = "Integer"
 
+import signal
+
 class Token(object):
     def __init__ (self, type, val):
         self.type = type
@@ -164,9 +166,12 @@ class CommandNode(object):
         for key, val in pairs:
             if not val:
                 continue
-            if key in [ "group", "command_id" ]:
+            if key in [ "group", "command_id"]:
                 continue
-            lines.append (s + "    %s = \"%s\";" % (key, escape_str(val)))
+            if isinstance(val, int):
+                lines.append (s + "    %s = %s;" % (key, str(val)))
+            else:
+                lines.append (s + "    %s = \"%s\";" % (key, escape_str(val)))
         lines.append (s + "}")
         return ("\n".join (lines))
 
@@ -411,6 +416,10 @@ class Parser:
             self._fail("Invalid value specified for command attribute 'stop_signal'")
         elif attrib_name == "stop_time_allowed" and attrib_val < 1:
             self._fail("Invalid value specified for command attribute 'stop_time_allwoed'")
+
+        if attrib_name == "stop_signal":
+            attrib_val = signal.Signals(attrib_val)
+
         cmd.attributes[attrib_name] = attrib_val
 
         return self._parse_command_param_list (cmd)
