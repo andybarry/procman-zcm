@@ -167,10 +167,20 @@ class ArgSeparator {
     bool ParseArg() {
       cur_arg_.clear();
 
+      if (!HasChar()) {
+        return false;
+      }
+
       // Skip leading whitespace
       while (NextChar() && std::isspace(cur_char_)) {}
       if (!HasChar()) {
-        return false;
+        // Final character, make sure it isn't a single-char arg.
+        if (!std::isspace(cur_char_)) {
+          cur_arg_.push_back(cur_char_);
+          return true;
+        } else {
+          return false;
+        }
       }
 
       bool quoted = false;
