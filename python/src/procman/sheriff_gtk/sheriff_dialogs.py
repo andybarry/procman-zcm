@@ -272,6 +272,7 @@ def do_add_command_dialog(sheriff, cmds_ts, window):
                 dlg.get_stop_signal(),
                 dlg.get_stop_time_allowed(),
             )
+            sheriff.trigger_autosave()
             break
         except ValueError as xcp:
             msgdlg = Gtk.MessageDialog(
@@ -283,7 +284,6 @@ def do_add_command_dialog(sheriff, cmds_ts, window):
             )
             msgdlg.run()
             msgdlg.destroy()
-        sheriff.trigger_autosave()
     dlg.destroy()
 
 
@@ -407,7 +407,7 @@ def _parse_script(script_manager, window, dlg):
     return script
 
 
-def do_add_script_dialog(script_manager, window):
+def do_add_script_dialog(script_manager, window, maybe_autosave_func):
     dlg = AddModifyScriptDialog(window, None)
     while dlg.run() == Gtk.ResponseType.ACCEPT:
         script = _parse_script(script_manager, window, dlg)
@@ -420,11 +420,12 @@ def do_add_script_dialog(script_manager, window):
             )
             continue
         script_manager.add_script(script)
+        maybe_autosave_func()
         break
     dlg.destroy()
 
 
-def do_edit_script_dialog(script_manager, window, script):
+def do_edit_script_dialog(script_manager, window, script, maybe_autosave_func):
     if script_manager.get_active_script():
         _do_err_dialog(
             window, "Script editing is not allowed while a script is running."
@@ -446,6 +447,7 @@ def do_edit_script_dialog(script_manager, window, script):
                 continue
         script_manager.remove_script(script)
         script_manager.add_script(new_script)
+        maybe_autosave_func()
         break
     dlg.destroy()
 

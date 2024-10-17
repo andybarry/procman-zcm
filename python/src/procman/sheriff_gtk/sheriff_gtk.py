@@ -490,7 +490,7 @@ class SheriffGtk(SheriffListener):
         self.script_manager.abort_script()
 
     def on_new_script_mi_activate(self, menuitem):
-        sd.do_add_script_dialog(self.script_manager, self.window)
+        sd.do_add_script_dialog(self.script_manager, self.window, self.maybe_autosave)
 
     def _get_script_menuitem(self, menu, script, name_parts, create):
         assert name_parts
@@ -571,7 +571,7 @@ class SheriffGtk(SheriffListener):
         edit_mi.connect(
             "activate",
             lambda mi: sd.do_edit_script_dialog(
-                self.script_manager, self.window, script
+                self.script_manager, self.window, script, self.maybe_autosave
             ),
         )
 
@@ -601,6 +601,7 @@ class SheriffGtk(SheriffListener):
         if not self.script_manager.get_scripts():
             self.edit_script_mi.set_sensitive(False)
             self.remove_script_mi.set_sensitive(False)
+        self.maybe_autosave()
 
     def _do_load_config(self):
         assert self.cfg_to_load is not None
