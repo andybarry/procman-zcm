@@ -96,6 +96,7 @@ class SheriffGtk(SheriffListener):
 
         # create sheriff and subscribe to events
         self.sheriff = Sheriff(self.zcm_obj)
+        self.sheriff.on_autosave = self.maybe_autosave
         self.sheriff.add_listener(self)
 
         self.script_manager = ScriptManager(self.sheriff)
@@ -346,9 +347,11 @@ class SheriffGtk(SheriffListener):
         if save_settings:
             self.save_settings()
 
+        self.maybe_autosave()
+            
+    def maybe_autosave(self):
         if self.autosave and self.config_filename:
             self.save_config(self.config_filename)
-            
 
     def load_settings(self):
         if not os.path.exists(self.config_fname):

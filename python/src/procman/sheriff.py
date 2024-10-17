@@ -554,6 +554,7 @@ class Sheriff(object):
         self._is_observer = False
         self._id = platform.node() + ":" + str(os.getpid()) + \
                 ":" + str(_now_utime())
+        self.on_autosave = None
 
         # publish a discovery message to query for existing deputies
         discover_msg = discovery_t()
@@ -571,6 +572,10 @@ class Sheriff(object):
 
         self._listeners = []
         self._queued_events = []
+
+    def trigger_autosave(self):
+        if self.on_autosave:
+            self.on_autosave()
 
     def _get_or_make_deputy(self, deputy_id):
         # _lock should already be acquired

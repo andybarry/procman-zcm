@@ -398,6 +398,7 @@ class SheriffCommandTreeView(Gtk.TreeView):
                     )
 
                 cmd_ind = cmd_ind + 1
+            self.sheriff.trigger_autosave()
             break
         dlg.destroy()
 

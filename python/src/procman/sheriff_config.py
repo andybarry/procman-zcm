@@ -168,7 +168,9 @@ class CommandNode(object):
                 continue
             if key in [ "group", "command_id"]:
                 continue
-            if isinstance(val, int):
+            if key == "stop_time_allowed":
+                val = int(val)
+            if isinstance(val, int) or isinstance(val, float):
                 lines.append (s + "    %s = %s;" % (key, str(val)))
             else:
                 lines.append (s + "    %s = \"%s\";" % (key, escape_str(val)))

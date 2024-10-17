@@ -71,6 +71,7 @@ class AddModifyCommandDialog(Gtk.Dialog):
         )
         if not is_add:
             self.cmd_id_te.set_sensitive(False)
+        self.cmd_id_te.grab_focus()
 
         # command name
         table.attach(Gtk.Label(label="Command"), 0, 1, 2, 3, 0, 0)
@@ -81,7 +82,6 @@ class AddModifyCommandDialog(Gtk.Dialog):
         self.name_te.connect(
             "activate", lambda e: self.response(Gtk.ResponseType.ACCEPT)
         )
-        self.name_te.grab_focus()
 
         # group
         table.attach(Gtk.Label(label="Group"), 0, 1, 3, 4, 0, 0)
@@ -283,6 +283,7 @@ def do_add_command_dialog(sheriff, cmds_ts, window):
             )
             msgdlg.run()
             msgdlg.destroy()
+        sheriff.trigger_autosave()
     dlg.destroy()
 
 
