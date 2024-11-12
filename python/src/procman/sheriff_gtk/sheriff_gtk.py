@@ -8,6 +8,7 @@ import subprocess
 import sys
 import time
 import traceback
+import datetime
 
 import gi
 
@@ -33,6 +34,7 @@ import procman.sheriff_gtk.deputies_treeview as ht
 from procman.sheriff_cli import SheriffHeadless, find_procman_deputy_cmd
 
 from procman_zcm.request_to_sheriff_t import request_to_sheriff_t
+
 
 try:
     from procman.build_prefix import BUILD_PREFIX
@@ -128,6 +130,7 @@ class SheriffGtk(SheriffListener):
         self.load_save_dir = None
         self.cfg_to_load = None
         self.autosave = True
+        self.last_config_save_time = time.time()
 
         # options menu
         self.is_observer_cmi = self.builder.get_object("is_observer_cmi")
@@ -351,7 +354,28 @@ class SheriffGtk(SheriffListener):
             
     def maybe_autosave(self):
         if self.autosave and self.config_filename:
-            self.save_config(self.config_filename)
+            # Check to see if the file is newer than we last saved it
+            try:
+                mtime = os.path.getmtime(self.config_filename)
+            except OSError:
+                return
+            if mtime < self.last_config_save_time:
+                self.save_config(self.config_filename)
+                self.last_autosave_time = time.time()
+            else:
+                warning_message = f'Not autosaving, config file is newer than last save.\n\nIt likely was modified while Procman Sheriff was running.\n\nFile: {self.config_filename}\n\nLast save time: {time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self.last_config_save_time))}\nFile modified time: {time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(mtime))}'
+                print('WARNING: ' + warning_message)
+
+                dialog = Gtk.MessageDialog(
+                    self.window,
+                    0,
+                    Gtk.MessageType.WARNING,
+                    Gtk.ButtonsType.OK,
+                    warning_message,
+                )
+                dialog.run()
+                dialog.destroy()
+
 
     def load_settings(self):
         if not os.path.exists(self.config_fname):
@@ -688,6 +712,7 @@ class SheriffGtk(SheriffListener):
 
     def save_config(self, filename):
         cfg_node = sheriff_config.ConfigNode()
+        self.last_config_save_time = time.time()
         self.sheriff.save_config(cfg_node)
         self.script_manager.save_config(cfg_node)
         try:
