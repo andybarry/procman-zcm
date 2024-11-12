@@ -359,18 +359,17 @@ class SheriffGtk(SheriffListener):
                 mtime = os.path.getmtime(self.config_filename)
             except OSError:
                 return
-            if mtime < self.last_config_save_time:
+            if mtime <= self.last_config_save_time + 2.0: # have a few seconds of slop because mtime isn't quite the same as time.time.
                 self.save_config(self.config_filename)
-                self.last_autosave_time = time.time()
             else:
                 warning_message = f'Not autosaving, config file is newer than last save.\n\nIt likely was modified while Procman Sheriff was running.\n\nFile: {self.config_filename}\n\nLast save time: {time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self.last_config_save_time))}\nFile modified time: {time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(mtime))}'
                 print('WARNING: ' + warning_message)
 
                 dialog = Gtk.MessageDialog(
                     self.window,
-                    0,
-                    Gtk.MessageType.WARNING,
-                    Gtk.ButtonsType.OK,
+                    Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
+                    Gtk.MessageType.ERROR,
+                    Gtk.ButtonsType.CLOSE,
                     warning_message,
                 )
                 dialog.run()
