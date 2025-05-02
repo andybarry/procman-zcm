@@ -238,14 +238,15 @@ class SheriffGtk(SheriffListener):
 
     def _on_request_to_sheriff(self, channel_name, msg):
         for i in range(msg.num_commands):
+            cmd = self.sheriff.get_command(msg.command_or_script_name[i])
+            if cmd is None:
+                print(f"ERROR: No such command: {msg.command_or_script_name[i]}")
+                continue
             if msg.command[i] == request_to_sheriff_t.CMD_START:
-                cmd = self.sheriff.get_command(msg.command_or_script_name[i])
                 self.sheriff.start_command(cmd)
             elif msg.command[i] == request_to_sheriff_t.CMD_STOP:
-                cmd = self.sheriff.get_command(msg.command_or_script_name[i])
                 self.sheriff.stop_command(cmd)
             elif msg.command[i] == request_to_sheriff_t.CMD_RESTART:
-                cmd = self.sheriff.get_command(msg.command_or_script_name[i])
                 self.sheriff.restart_command(cmd)
 
             elif msg.command[i] == request_to_sheriff_t.CMD_RUN_SCRIPT:
@@ -258,7 +259,7 @@ class SheriffGtk(SheriffListener):
                 self.script_manager.abort_script()
             else:
                 print("ERROR: Unknown command type: %d" % msg.command[i])
-                return
+                continue
 
     def command_added(self, deputy_obj, cmd_obj):
         self._schedule_cmds_update()
