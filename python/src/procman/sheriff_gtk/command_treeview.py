@@ -123,6 +123,38 @@ class SheriffCommandTreeView(Gtk.TreeView):
         assert model is self.cmds_ts
         return self.cmds_ts.rows_to_commands(rows)
 
+    def get_directly_selected_commands(self):
+        """Get only the commands that are directly selected, not those in selected groups"""
+        selection = self.get_selection()
+        if selection is None:
+            return []
+        model, rows = selection.get_selected_rows()
+        assert model is self.cmds_ts
+        
+        directly_selected = []
+        for path in rows:
+            cmds_iter = model.get_iter(path)
+            cmd = model.get_value(cmds_iter, cm.COL_CMDS_TV_OBJ)
+            if cmd:  # Only count actual command objects, not group rows
+                directly_selected.append(cmd)
+        return directly_selected
+
+    def get_selected_groups_count(self):
+        """Get the number of group rows that are directly selected"""
+        selection = self.get_selection()
+        if selection is None:
+            return 0
+        model, rows = selection.get_selected_rows()
+        assert model is self.cmds_ts
+        
+        group_count = 0
+        for path in rows:
+            cmds_iter = model.get_iter(path)
+            cmd = model.get_value(cmds_iter, cm.COL_CMDS_TV_OBJ)
+            if not cmd:  # This is a group row (no command object)
+                group_count += 1
+        return group_count
+
     #    def get_background_color(self):
     #        return self.base_color
     #
@@ -177,7 +209,34 @@ class SheriffCommandTreeView(Gtk.TreeView):
     #            self.set_text_color(Gdk.Color(save_map["command_treeview_text_color"]))
 
     def _start_selected_commands(self, *args):
-        for cmd in self.get_selected_commands():
+        directly_selected_cmds = self.get_directly_selected_commands()
+        selected_groups_count = self.get_selected_groups_count()
+        
+        if len(directly_selected_cmds) > 9 or selected_groups_count > 4:
+            total_affected = len(self.get_selected_commands())
+            dialog = Gtk.MessageDialog(
+                self.get_toplevel(),
+                Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
+                Gtk.MessageType.QUESTION,
+                Gtk.ButtonsType.NONE,
+                "You are about to start {} commands. Do you want to continue?".format(total_affected)
+            )
+            dialog.set_title("Confirm Start Multiple Commands")
+            
+            # Add stock buttons with icons
+            yes_button = dialog.add_button(Gtk.STOCK_YES, Gtk.ResponseType.YES)
+            no_button = dialog.add_button(Gtk.STOCK_NO, Gtk.ResponseType.NO)
+            
+            # Style the buttons
+            yes_button.get_style_context().add_class("suggested-action")
+            
+            response = dialog.run()
+            dialog.destroy()
+            if response != Gtk.ResponseType.YES:
+                return
+        # Use the original method to get all commands (including those in selected groups)
+        selected_cmds = self.get_selected_commands()
+        for cmd in selected_cmds:
             self.sheriff.start_command(cmd)
 
     def _stop_selected_commands(self, *args):
@@ -185,7 +244,34 @@ class SheriffCommandTreeView(Gtk.TreeView):
             self.sheriff.stop_command(cmd)
 
     def _restart_selected_commands(self, *args):
-        for cmd in self.get_selected_commands():
+        directly_selected_cmds = self.get_directly_selected_commands()
+        selected_groups_count = self.get_selected_groups_count()
+        
+        if len(directly_selected_cmds) > 9 or selected_groups_count > 4:
+            total_affected = len(self.get_selected_commands())
+            dialog = Gtk.MessageDialog(
+                self.get_toplevel(),
+                Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
+                Gtk.MessageType.QUESTION,
+                Gtk.ButtonsType.NONE,
+                "You are about to restart {} commands. Do you want to continue?".format(total_affected)
+            )
+            dialog.set_title("Confirm Restart Multiple Commands")
+            
+            # Add stock buttons with icons
+            yes_button = dialog.add_button(Gtk.STOCK_YES, Gtk.ResponseType.YES)
+            no_button = dialog.add_button(Gtk.STOCK_NO, Gtk.ResponseType.NO)
+            
+            # Style the buttons
+            yes_button.get_style_context().add_class("suggested-action")
+            
+            response = dialog.run()
+            dialog.destroy()
+            if response != Gtk.ResponseType.YES:
+                return
+        # Use the original method to get all commands (including those in selected groups)
+        selected_cmds = self.get_selected_commands()
+        for cmd in selected_cmds:
             self.sheriff.restart_command(cmd)
 
     def _remove_selected_commands(self, *args):
