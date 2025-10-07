@@ -95,6 +95,16 @@ class SheriffGtk(SheriffListener):
 
         # deputy spawned by the sheriff
         self.spawned_deputy = None
+        
+        # Initialize window settings
+        self.saved_window_width = None
+        self.saved_window_height = None
+        self.saved_window_x = None
+        self.saved_window_y = None
+        
+        # Initialize splitter position settings
+        self.saved_vpane_position = None
+        self.saved_hpane_position = None
 
         # create sheriff and subscribe to events
         self.sheriff = Sheriff(self.zcm_obj)
@@ -116,6 +126,12 @@ class SheriffGtk(SheriffListener):
         icon = find_icon()
         if icon is not None:
             self.window.set_icon_from_file(icon)
+        
+        # Set minimum window size
+        self.window.set_size_request(375, 200)
+        
+        # Connect window configure-event to save position and size
+        self.window.connect("configure-event", self._on_window_configure_event)
 
         self.cmds_ts = cm.SheriffCommandModel(self.sheriff)
         self.cmds_tv = ctv.SheriffCommandTreeView(
@@ -161,12 +177,12 @@ class SheriffGtk(SheriffListener):
         self.edit_scripts_menu = self.builder.get_object("edit_scripts_menu")
         self.remove_scripts_menu = self.builder.get_object("remove_scripts_menu")
 
-        vpane = self.builder.get_object("vpaned")
+        self.vpane = self.builder.get_object("vpaned")
 
         sw = Gtk.ScrolledWindow()
         sw.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-        hpane = self.builder.get_object("hpaned")
-        hpane.pack1(sw, resize=True)
+        self.hpane = self.builder.get_object("hpaned")
+        self.hpane.pack1(sw, resize=True)
         sw.add(self.cmds_tv)
 
         cmds_sel = self.cmds_tv.get_selection()
@@ -204,14 +220,22 @@ class SheriffGtk(SheriffListener):
         self.deputies_tv = ht.DeputyTreeView(self.sheriff, self.deputies_ts)
         sw = Gtk.ScrolledWindow()
         sw.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-        hpane.pack2(sw, resize=False)
+        self.hpane.pack2(sw, resize=True)
         sw.add(self.deputies_tv)
 
         GObject.timeout_add(1000, lambda *_: self.deputies_ts.update() or True)
 
         # stdout textview
         self.cmd_console = cc.SheriffCommandConsole(self.sheriff, self.zcm_obj)
-        vpane.add2(self.cmd_console)
+        self.vpane.add2(self.cmd_console)
+        
+        # Connect paned widget signals to save splitter positions
+        self.vpane.connect("notify::position", self._on_paned_position_changed)
+        self.hpane.connect("notify::position", self._on_paned_position_changed)
+        
+        # Connect realize signals to apply splitter positions as soon as widgets are ready
+        self.vpane.connect("realize", self._on_paned_realize)
+        self.hpane.connect("realize", self._on_paned_realize)
 
         # status bar
         self.statusbar = self.builder.get_object("statusbar")
@@ -225,6 +249,9 @@ class SheriffGtk(SheriffListener):
         self.config_fname = os.path.join(config_dir, "config")
         self.load_settings()
 
+        # Apply window position and size before showing the window to avoid jumps
+        self._apply_window_settings()
+        
         self.window.show_all()
 
         # update very soon
@@ -356,7 +383,10 @@ class SheriffGtk(SheriffListener):
         self.sheriff.shutdown()
         self.script_manager.shutdown()
         if save_settings:
-            self.save_settings()
+            # Only save if the window still has valid position/size
+            # (i.e., it wasn't already saved during delete-event)
+            if self.window and self.window.get_visible():
+                self.save_settings()
 
         self.maybe_autosave()
             
@@ -399,6 +429,26 @@ class SheriffGtk(SheriffListener):
         self.deputies_tv.load_settings(d)
         self.autosave = d.get("autosave", True)
         self.builder.get_object("autosave_mi").set_active(self.autosave)
+        
+        # Store window position and size for later application
+        self.saved_window_width = d.get("window_width")
+        self.saved_window_height = d.get("window_height")
+        self.saved_window_x = d.get("window_x")
+        self.saved_window_y = d.get("window_y")
+        
+        # Store splitter positions for later application
+        self.saved_vpane_position = d.get("vpane_position")
+        self.saved_hpane_position = d.get("hpane_position")
+
+    def _apply_window_settings(self):
+        """Apply saved window position and size"""
+        if self.window:
+            if self.saved_window_width and self.saved_window_height:
+                self.window.resize(self.saved_window_width, self.saved_window_height)
+            if self.saved_window_x is not None and self.saved_window_y is not None:
+                self.window.move(self.saved_window_x, self.saved_window_y)
+        
+        # Splitter positions are now applied via realize events to avoid jumps
 
     def save_settings(self):
         config_dir = os.path.join(GLib.get_user_config_dir(), "procman-sheriff")
@@ -411,6 +461,21 @@ class SheriffGtk(SheriffListener):
         self.cmd_console.save_settings(d)
         self.deputies_tv.save_settings(d)
         d["autosave"] = self.autosave
+        
+        # Save window position and size
+        if self.window:
+            size = self.window.get_size()
+            position = self.window.get_position()
+            d["window_width"] = size.width
+            d["window_height"] = size.height
+            d["window_x"] = position.root_x
+            d["window_y"] = position.root_y
+        
+        # Save splitter positions
+        if self.vpane:
+            d["vpane_position"] = self.vpane.get_position()
+        if self.hpane:
+            d["hpane_position"] = self.hpane.get_position()
 
         try:
             with open(self.config_fname, 'wb') as config_file:
@@ -777,6 +842,45 @@ class SheriffGtk(SheriffListener):
         # TODO script menu sensitivities
         self.abort_script_mi.set_sensitive(script_active)
 
+    def _on_window_configure_event(self, widget, event):
+        """Handle window configure events to save position and size"""
+        # Use GLib.idle_add to defer the save operation to avoid excessive saves
+        def save_window_state():
+            if self.window and self.window.get_visible():
+                self.save_settings()
+            return False
+        
+        GLib.idle_add(save_window_state)
+        return False
+
+    def _on_paned_position_changed(self, widget, param):
+        """Handle paned widget position changes to save splitter positions"""
+        # Use GLib.idle_add to defer the save operation to avoid excessive saves
+        def save_splitter_state():
+            if self.window and self.window.get_visible():
+                self.save_settings()
+            return False
+        
+        GLib.idle_add(save_splitter_state)
+
+    def _on_paned_realize(self, widget):
+        """Handle paned widget realize event to apply saved positions"""
+        # Apply splitter positions as soon as the widget is realized
+        if widget == self.vpane and self.saved_vpane_position is not None:
+            allocation = widget.get_allocation()
+            # Ensure vpane position leaves at least 5% for each pane
+            min_position = int(allocation.height * 0.05)  # 5% of height
+            max_position = int(allocation.height * 0.95)  # 95% of height
+            constrained_position = max(min_position, min(self.saved_vpane_position, max_position))
+            widget.set_position(constrained_position)
+        elif widget == self.hpane and self.saved_hpane_position is not None:
+            allocation = widget.get_allocation()
+            # Ensure hpane position leaves at least 5% for each pane
+            min_position = int(allocation.width * 0.05)   # 5% of width
+            max_position = int(allocation.width * 0.95)   # 95% of width
+            constrained_position = max(min_position, min(self.saved_hpane_position, max_position))
+            widget.set_position(constrained_position)
+
     def _on_cmds_selection_changed(self, selection):
         selected_cmds = self.cmds_tv.get_selected_commands()
         if len(selected_cmds) == 1:
@@ -922,6 +1026,9 @@ def main():
             """
             Runs on alt-f4 or close button
             """
+            # Save window position and size before the window is destroyed
+            gui.save_settings()
+            return False  # Allow the window to be destroyed
 
         gui.window.connect("destroy", Gtk.main_quit)
         gui.window.connect("delete-event", on_delete)
