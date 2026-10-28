@@ -24,7 +24,12 @@ static int64_t Now() {
 }
 
 bool EventLoop::TimerComparator::operator() (const Timer* lhs, const Timer* rhs) {
-  return lhs->deadline_ < rhs->deadline_;
+  if (lhs->deadline_ != rhs->deadline_) {
+    return lhs->deadline_ < rhs->deadline_;
+  }
+  // Distinct timers can have the same deadline. Keep both in the set or the
+  // dropped timer remains marked active but is never dispatched again.
+  return std::less<const Timer*>()(lhs, rhs);
 }
 
 class SocketNotifier {

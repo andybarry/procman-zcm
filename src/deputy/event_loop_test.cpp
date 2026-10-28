@@ -42,6 +42,31 @@ void TestTimers() {
   assert(c_count == 1);
 }
 
+void TestIdenticalTimerDeadlines() {
+  EventLoop loop;
+
+  int a_count = 0;
+  int b_count = 0;
+
+  // Give the timers distinct initial deadlines, then dispatch both after they
+  // expire. Repeating timers are rescheduled from one shared timestamp, so
+  // their next deadlines are identical.
+  TimerPtr timer_a = loop.AddTimer(1, EventLoop::kRepeating, true,
+      [&a_count]() { ++a_count; });
+  usleep(2000);
+  TimerPtr timer_b = loop.AddTimer(1, EventLoop::kRepeating, true,
+      [&b_count]() { ++b_count; });
+  usleep(2000);
+  loop.IterateOnce();
+  assert(a_count == 1);
+  assert(b_count == 1);
+
+  usleep(2000);
+  loop.IterateOnce();
+  assert(a_count == 2);
+  assert(b_count == 2);
+}
+
 void TestSockets() {
   EventLoop loop;
 
@@ -98,6 +123,8 @@ void TestPosixSignals() {
 int main(int argc, char** argv) {
   printf("TestTimers\n");
   TestTimers();
+  printf("TestIdenticalTimerDeadlines\n");
+  TestIdenticalTimerDeadlines();
   printf("TestSockets\n");
   TestSockets();
   printf("TestPosixSignals\n");
